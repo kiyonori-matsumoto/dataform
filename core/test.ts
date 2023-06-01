@@ -40,6 +40,7 @@ export class Test {
 
   private datasetToTest: Resolvable;
   private contextableQuery: Contextable<ICommonContext, string>;
+  private _withPreOperations = false;
 
   public config(config: ITestConfig) {
     checkExcessProperties(
@@ -56,6 +57,11 @@ export class Test {
 
   public dataset(ref: Resolvable) {
     this.datasetToTest = ref;
+    return this;
+  }
+
+  public withPreOperations() {
+    this._withPreOperations = true;
     return this;
   }
 
@@ -98,6 +104,10 @@ export class Test {
       } else {
         const refReplacingContext = new RefReplacingContext(testContext);
         this.proto.testQuery = refReplacingContext.apply(dataset.contextableQuery);
+
+        if (this._withPreOperations) {
+          this.proto.testQuery = [...dataset.contextablePreOps, this.proto.testQuery].join(";\n");
+        }
       }
     }
     this.proto.expectedOutputQuery = testContext.apply(this.contextableQuery);

@@ -379,19 +379,19 @@ export interface ITableContext extends ICommonContext {
  * @hidden
  */
 export class Table {
-  public static readonly INLINE_IGNORED_PROPS: Array<keyof dataform.ITable> = 
-    [
-      "bigquery",
-      "redshift",
-      "snowflake",
-      "sqlDataWarehouse",
-      "presto",
-      "preOps",
-      "postOps",
-      "actionDescriptor",
-      "disabled",
-      "where"
-    ];
+  public static readonly INLINE_IGNORED_PROPS: Array<keyof dataform.ITable> =
+  [
+    "bigquery",
+    "redshift",
+    "snowflake",
+    "sqlDataWarehouse",
+    "presto",
+    "preOps",
+    "postOps",
+    "actionDescriptor",
+    "disabled",
+    "where"
+  ];
 
   public proto: dataform.ITable = dataform.Table.create({
     type: "view",
@@ -406,11 +406,15 @@ export class Table {
   // We delay contextification until the final compile step, so hold these here for now.
   public contextableQuery: Contextable<ITableContext, string>;
   private contextableWhere: Contextable<ITableContext, string>;
-  private contextablePreOps: Array<Contextable<ITableContext, string | string[]>> = [];
+  private _contextablePreOps: Array<Contextable<ITableContext, string | string[]>> = [];
   private contextablePostOps: Array<Contextable<ITableContext, string | string[]>> = [];
 
   private uniqueKeyAssertions: Assertion[] = [];
   private rowConditionsAssertion: Assertion;
+
+  public get contextablePreOps() {
+    return this._contextablePreOps;
+  }
 
   public config(config: ITableConfig) {
     checkExcessProperties(
@@ -494,7 +498,7 @@ export class Table {
   }
 
   public preOps(pres: Contextable<ITableContext, string | string[]>) {
-    this.contextablePreOps.push(pres);
+    this._contextablePreOps.push(pres);
     return this;
   }
 
@@ -719,7 +723,10 @@ export class Table {
     if (this.proto.enumType === dataform.TableType.INCREMENTAL) {
       this.proto.incrementalQuery = incrementalContext.apply(this.contextableQuery);
 
-      this.proto.incrementalPreOps = this.contextifyOps(this.contextablePreOps, incrementalContext);
+      this.proto.incrementalPreOps = this.contextifyOps(
+        this._contextablePreOps,
+        incrementalContext
+      );
       this.proto.incrementalPostOps = this.contextifyOps(
         this.contextablePostOps,
         incrementalContext
@@ -730,7 +737,7 @@ export class Table {
       this.proto.where = context.apply(this.contextableWhere);
     }
 
-    this.proto.preOps = this.contextifyOps(this.contextablePreOps, context).filter(
+    this.proto.preOps = this.contextifyOps(this._contextablePreOps, context).filter(
       op => !!op.trim()
     );
     this.proto.postOps = this.contextifyOps(this.contextablePostOps, context).filter(
